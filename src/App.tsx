@@ -242,11 +242,11 @@ export default function App() {
       <header className={`border-b transition-colors duration-500 ${
         activeTab === 'convertidor' ? 'border-slate-200/60 bg-white/70 backdrop-blur-md' : 'border-slate-900 bg-slate-950/80 backdrop-blur-md'
       } sticky top-0 z-40`}>
-        <div className="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="max-w-6xl mx-auto px-4 py-2 sm:py-3 flex items-center justify-between">
           
           {/* Logo & Brand */}
           <div className="flex items-center gap-3">
-            <div id="app-logo" className="w-10 h-10 select-none">
+            <div id="app-logo" className="w-8 h-8 sm:w-10 sm:h-10 select-none">
               <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <defs>
                   <linearGradient id="logo-emerald-grad" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -260,20 +260,20 @@ export default function App() {
               </svg>
             </div>
             <div>
-              <h1 className={`text-lg font-black tracking-tight flex items-center gap-1.5 leading-none ${
+              <h1 className={`text-base sm:text-lg font-black tracking-tight flex items-center gap-1.5 leading-none ${
                 activeTab === 'convertidor' ? 'text-slate-900' : 'text-slate-50'
               }`}>
                 ValutaX
-                <span className="text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-1.5 py-0.5 rounded-full uppercase tracking-wider">PWA</span>
+                <span className="text-[9px] sm:text-[10px] font-bold bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-1.5 py-0.5 rounded-full uppercase tracking-wider">PWA</span>
               </h1>
-              <p className="text-[10px] text-slate-500 mt-1 font-medium tracking-wide">MULTIDIVISA & CALCULADORA PREMIUM</p>
+              <p className="text-[9px] sm:text-[10px] text-slate-500 mt-0.5 sm:mt-1 font-medium tracking-wide">MULTIDIVISA & CALCULADORA PREMIUM</p>
             </div>
           </div>
 
           {/* Installation Badge / Button */}
           <div>
             {isInstalled ? (
-              <span className="text-xs bg-emerald-500/10 text-emerald-600 font-bold border border-emerald-500/20 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+              <span className="text-[10px] sm:text-xs bg-emerald-500/10 text-emerald-600 font-bold border border-emerald-500/20 px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl flex items-center gap-1.5">
                 <i className="fa-solid fa-circle-check"></i>
                 App Instalada
               </span>
@@ -281,7 +281,7 @@ export default function App() {
               <button
                 id="install-pwa-btn"
                 onClick={handleInstallApp}
-                className="text-xs font-bold px-3.5 py-1.5 bg-emerald-500 text-slate-950 hover:bg-emerald-400 active:scale-95 transition-all rounded-xl shadow-md shadow-emerald-500/10 flex items-center gap-1.5 cursor-pointer"
+                className="text-[10px] sm:text-xs font-bold px-2.5 sm:px-3.5 py-1 sm:py-1.5 bg-emerald-500 text-slate-950 hover:bg-emerald-400 active:scale-95 transition-all rounded-xl shadow-md shadow-emerald-500/10 flex items-center gap-1.5 cursor-pointer"
               >
                 <i className="fa-solid fa-cloud-arrow-down"></i>
                 Instalar App
@@ -293,10 +293,10 @@ export default function App() {
       </header>
 
       {/* Main Container */}
-      <main className="flex-1 w-full max-w-6xl mx-auto px-4 py-8">
+      <main className="flex-1 w-full max-w-6xl mx-auto px-2 sm:px-4 py-2 sm:py-8">
         
         {/* Navigation Selector Tabs */}
-        <div className="flex justify-center mb-8">
+        <div className="flex justify-center mb-3 sm:mb-8">
           <div className={`p-1.5 rounded-2xl flex items-center shadow-sm border transition-colors duration-500 ${
             activeTab === 'convertidor' ? 'bg-slate-100/80 border-slate-200/50' : 'bg-slate-900/60 border-slate-800'
           }`}>

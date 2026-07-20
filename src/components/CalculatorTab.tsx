@@ -8,7 +8,6 @@ interface CalculatorTabProps {
 
 export default function CalculatorTab({ onResultEvaluated }: CalculatorTabProps) {
   const [expression, setExpression] = useState<string>('');
-  const [previewResult, setPreviewResult] = useState<number>(0);
   const [isEvaluated, setIsEvaluated] = useState<boolean>(false);
   const [evaluatedResult, setEvaluatedResult] = useState<number>(0);
   const [lastFormula, setLastFormula] = useState<string>('');
@@ -30,31 +29,9 @@ export default function CalculatorTab({ onResultEvaluated }: CalculatorTabProps)
     }
   }, [history]);
 
-  // Live calculation preview
-  useEffect(() => {
-    if (!expression) {
-      setPreviewResult(0);
-      return;
-    }
-
-    // Clean up trailing operator for live preview evaluation
-    let cleanExpr = expression.trim();
-    if (['+', '-', '×', '÷'].includes(cleanExpr.slice(-1))) {
-      cleanExpr = cleanExpr.slice(0, -1);
-    }
-
-    if (cleanExpr) {
-      const val = safeEvaluate(cleanExpr);
-      setPreviewResult(val);
-    } else {
-      setPreviewResult(0);
-    }
-  }, [expression]);
-
   const handleKeyPress = (key: string) => {
     if (key === 'C') {
       setExpression('');
-      setPreviewResult(0);
       setIsEvaluated(false);
       setEvaluatedResult(0);
       setLastFormula('');
@@ -180,7 +157,7 @@ export default function CalculatorTab({ onResultEvaluated }: CalculatorTabProps)
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [expression]);
+  }, [expression, isEvaluated, evaluatedResult]);
 
   const buttons = [
     { label: 'C', value: 'C', style: 'bg-rose-950/40 text-rose-400 hover:bg-rose-950/60 border border-rose-800/20 active:scale-95' },
@@ -218,83 +195,102 @@ export default function CalculatorTab({ onResultEvaluated }: CalculatorTabProps)
     setEvaluatedResult(0);
   };
 
-  const currentValue = isEvaluated ? evaluatedResult : previewResult;
+  // Check if expression contains any mathematical operator
+  const hasOperators = /[\+\-\×\÷%]/.test(expression);
+  // We can convert if the result has been evaluated, OR if the expression is just a plain, valid non-zero number
+  const isPlainNumber = !!expression && !hasOperators && !isNaN(Number(expression)) && Number(expression) !== 0;
+
+  const currentValue = isEvaluated ? evaluatedResult : (isPlainNumber ? Number(expression) : 0);
   const isConvertDisabled = currentValue === 0;
+  const [showHistoryMobile, setShowHistoryMobile] = useState<boolean>(false);
 
   return (
-    <div id="calculator-section" className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full max-w-4xl mx-auto px-1 sm:px-4 py-4">
+    <div id="calculator-section" className="grid grid-cols-1 lg:grid-cols-12 gap-4 lg:gap-8 w-full max-w-4xl mx-auto px-1 sm:px-4 py-1 sm:py-4">
       {/* Main Calculator Screen and Keypad */}
-      <div className="lg:col-span-7 bg-slate-900/40 backdrop-blur-xl border border-slate-800/50 p-6 rounded-3xl shadow-2xl flex flex-col justify-between">
+      <div className="lg:col-span-7 bg-slate-900/40 backdrop-blur-xl border border-slate-800/50 p-3 sm:p-6 rounded-3xl shadow-2xl flex flex-col justify-between">
         {/* Displays */}
-        <div className="mb-6 flex flex-col justify-end items-end bg-slate-950/50 p-5 rounded-2xl border border-slate-800/40 min-h-[140px] text-right font-mono overflow-hidden">
-          <div className="text-slate-400 text-sm overflow-x-auto whitespace-nowrap max-w-full pb-1 scrollbar-none h-6">
+        <div className="mb-3 sm:mb-5 flex flex-col justify-end items-end bg-slate-950/50 p-3.5 sm:p-5 rounded-2xl border border-slate-800/40 min-h-[90px] sm:min-h-[140px] text-right font-mono overflow-hidden">
+          <div className="text-slate-400 text-xs sm:text-sm overflow-x-auto whitespace-nowrap max-w-full pb-1 scrollbar-none h-6 w-full text-right">
             {isEvaluated ? (
               <span className="text-slate-500">{lastFormula} =</span>
+            ) : (
+              <span className="text-slate-500/70">Calculadora de Divisas</span>
+            )}
+          </div>
+          <div className="text-2xl sm:text-3xl font-bold text-slate-50 tracking-tight overflow-x-auto whitespace-nowrap max-w-full py-1 h-10 sm:h-12 w-full text-right">
+            {isEvaluated ? (
+              formatCurrencyValue(evaluatedResult)
             ) : (
               expression || '0'
             )}
           </div>
-          <div className="text-3xl font-bold text-slate-50 tracking-tight overflow-x-auto whitespace-nowrap max-w-full py-1 h-12">
-            {isEvaluated ? (
-              formatCurrencyValue(evaluatedResult)
-            ) : (
-              expression ? formatCurrencyValue(previewResult) : '0'
-            )}
-          </div>
-          <div className="text-xs text-emerald-500 font-sans tracking-wide mt-1 flex items-center gap-1.5 opacity-60">
+          <div className="text-[10px] sm:text-xs text-emerald-500 font-sans tracking-wide mt-1 flex items-center gap-1.5 opacity-60">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            {isEvaluated ? 'Resultado calculado' : 'Previsualización en tiempo real'}
+            {isEvaluated ? 'Resultado calculado' : 'Ingresa una operación y presiona "="'}
           </div>
         </div>
-
+ 
         {/* Dedicated Convert Button */}
         <button
           id="send-to-converter-btn"
           onClick={() => onResultEvaluated(currentValue)}
           disabled={isConvertDisabled}
-          className={`w-full py-3.5 px-5 mb-4 rounded-2xl font-bold text-xs sm:text-sm tracking-wide transition-all flex items-center justify-center gap-2.5 shadow-lg select-none cursor-pointer ${
+          className={`w-full py-2.5 sm:py-3.5 px-4 sm:px-5 mb-3 sm:mb-4 rounded-2xl font-bold text-xs sm:text-sm tracking-wide transition-all flex items-center justify-center gap-2 sm:gap-2.5 shadow-lg select-none cursor-pointer ${
             isConvertDisabled
               ? 'bg-slate-800/40 text-slate-600 border border-slate-800/50 cursor-not-allowed'
               : 'bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-slate-950 shadow-emerald-950/20 active:scale-[0.98]'
           }`}
         >
-          <i className="fa-solid fa-money-bill-transfer text-base"></i>
+          <i className="fa-solid fa-money-bill-transfer text-sm sm:text-base"></i>
           <span>
             {isConvertDisabled
-              ? 'Calcula un monto para convertir'
-              : `Convertir ${formatCurrencyValue(currentValue)} USD`}
+              ? 'Ingresa o calcula un monto'
+              : 'Convertir monto'}
           </span>
         </button>
-
+ 
         {/* Keyboard Instructions (Desktop) */}
-        <div className="hidden sm:flex justify-between items-center px-2 py-1 mb-4 text-[10px] text-slate-500 font-mono">
+        <div className="hidden sm:flex justify-between items-center px-2 py-1 mb-3 text-[10px] text-slate-500 font-mono">
           <span><i className="fa-solid fa-keyboard mr-1"></i> Teclado habilitado</span>
           <span>[Enter] = Calcular resultado</span>
         </div>
-
+ 
         {/* Grid Keypad */}
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-4 gap-2 sm:gap-3">
           {buttons.map((btn) => (
             <button
               key={btn.label}
               id={`calc-btn-${btn.value}`}
               onClick={() => handleKeyPress(btn.value)}
-              className={`py-4 rounded-2xl font-sans transition-all duration-150 flex items-center justify-center cursor-pointer select-none ${btn.style}`}
+              className={`py-2.5 sm:py-4 rounded-2xl font-sans transition-all duration-150 flex items-center justify-center cursor-pointer select-none text-sm sm:text-base ${btn.style}`}
             >
               {btn.label === '⌫' ? (
-                <i className="fa-solid fa-delete-left text-lg"></i>
+                <i className="fa-solid fa-delete-left text-base sm:text-lg"></i>
               ) : (
                 btn.label
               )}
             </button>
           ))}
         </div>
-      </div>
 
+        {/* Mobile History Toggle Button */}
+        <button
+          id="toggle-history-mobile-btn"
+          onClick={() => setShowHistoryMobile(!showHistoryMobile)}
+          className="flex lg:hidden w-full mt-3 py-2 px-4 bg-slate-950/30 border border-slate-800/50 rounded-xl items-center justify-center gap-2 text-[11px] font-bold text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+        >
+          <i className="fa-solid fa-clock-history text-emerald-500 text-xs"></i>
+          <span>{showHistoryMobile ? 'Ocultar Historial Financiero' : 'Ver Historial Financiero'}</span>
+          <i className={`fa-solid ${showHistoryMobile ? 'fa-chevron-up' : 'fa-chevron-down'} text-[9px] opacity-75`}></i>
+        </button>
+      </div>
+ 
       {/* Calculator History/Tape */}
-      <div className="lg:col-span-5 bg-slate-900/20 border border-slate-800/30 p-6 rounded-3xl flex flex-col h-[540px]">
+      <div className={`lg:col-span-5 bg-slate-900/20 border border-slate-800/30 p-4 sm:p-6 rounded-3xl flex flex-col h-[320px] lg:h-[540px] ${
+        showHistoryMobile ? 'flex' : 'hidden lg:flex'
+      }`}>
         <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-800/40">
-          <h3 className="text-sm font-semibold tracking-wide uppercase text-slate-400 flex items-center gap-2">
+          <h3 className="text-xs sm:text-sm font-semibold tracking-wide uppercase text-slate-400 flex items-center gap-2">
             <i className="fa-solid fa-clock-history text-emerald-500"></i> Historial Financiero
           </h3>
           {history.length > 0 && (
@@ -307,13 +303,13 @@ export default function CalculatorTab({ onResultEvaluated }: CalculatorTabProps)
             </button>
           )}
         </div>
-
+ 
         <div className="flex-1 overflow-y-auto pr-1 space-y-3 scrollbar-thin">
           <AnimatePresence initial={false}>
             {history.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center text-slate-600 px-4">
-                <div className="w-12 h-12 rounded-full border border-slate-800 flex items-center justify-center mb-3">
-                  <i className="fa-solid fa-calculator text-lg opacity-40"></i>
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full border border-slate-800 flex items-center justify-center mb-3">
+                  <i className="fa-solid fa-calculator text-base sm:text-lg opacity-40"></i>
                 </div>
                 <p className="text-xs font-medium">No hay operaciones previas</p>
                 <p className="text-[10px] mt-1 text-slate-500">
@@ -331,11 +327,11 @@ export default function CalculatorTab({ onResultEvaluated }: CalculatorTabProps)
                   onClick={() => useHistoryItem(item)}
                   className="p-3 bg-slate-900/40 border border-slate-800/50 hover:border-emerald-500/30 rounded-xl cursor-pointer hover:bg-slate-800/20 transition-all text-right group"
                 >
-                  <div className="text-xs text-slate-500 font-mono truncate mb-1 group-hover:text-slate-400">
+                  <div className="text-[11px] sm:text-xs text-slate-500 font-mono truncate mb-1 group-hover:text-slate-400">
                     {item.expression}
                   </div>
-                  <div className="text-sm font-bold text-slate-200 font-mono flex justify-between items-center">
-                    <span className="text-[10px] text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                  <div className="text-xs sm:text-sm font-bold text-slate-200 font-mono flex justify-between items-center">
+                    <span className="text-[9px] sm:text-[10px] text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity">
                       Usar fórmula
                     </span>
                     <span>= {formatCurrencyValue(item.result)}</span>
@@ -347,7 +343,7 @@ export default function CalculatorTab({ onResultEvaluated }: CalculatorTabProps)
         </div>
         
         {/* Pro Tip badge */}
-        <div className="mt-4 p-3 bg-slate-800/10 border border-slate-800/20 rounded-xl text-[10px] text-slate-500 leading-relaxed">
+        <div className="mt-4 p-2.5 sm:p-3 bg-slate-800/10 border border-slate-800/20 rounded-xl text-[9px] sm:text-[10px] text-slate-500 leading-relaxed">
           <span className="font-semibold text-slate-400">Consejo Premium:</span> Puedes presionar cualquier registro del historial para recuperar la expresión y recalcularla o editarla.
         </div>
       </div>
