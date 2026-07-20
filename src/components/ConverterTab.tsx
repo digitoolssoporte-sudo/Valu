@@ -81,10 +81,18 @@ export default function ConverterTab({
   };
 
   // Filter currencies based on search query
-  const filteredCurrencies = CURRENCIES.filter((curr) =>
-    curr.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    curr.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCurrencies = CURRENCIES.filter((curr) => {
+    const query = searchQuery.toLowerCase().trim();
+    if (!query) return true;
+
+    const matchesCode = curr.code.toLowerCase().includes(query);
+    const matchesName = curr.name.toLowerCase().includes(query);
+    const matchesCountry = curr.countries?.some(country =>
+      country.toLowerCase().includes(query)
+    ) ?? false;
+
+    return matchesCode || matchesName || matchesCountry;
+  });
 
   return (
     <div id="converter-section" className="w-full max-w-4xl mx-auto px-1 sm:px-4 py-2">
@@ -100,7 +108,7 @@ export default function ConverterTab({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Buscar moneda (PEN, EUR...)"
+            placeholder="Buscar por moneda, país o código..."
             className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-slate-800 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all shadow-sm"
           />
           {searchQuery && (

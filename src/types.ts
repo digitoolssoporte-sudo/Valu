@@ -3,6 +3,7 @@ export interface Currency {
   name: string;
   flag: string;
   symbol: string;
+  countries?: string[];
 }
 
 export interface Rates {

@@ -9,6 +9,9 @@ interface CalculatorTabProps {
 export default function CalculatorTab({ onResultEvaluated }: CalculatorTabProps) {
   const [expression, setExpression] = useState<string>('');
   const [previewResult, setPreviewResult] = useState<number>(0);
+  const [isEvaluated, setIsEvaluated] = useState<boolean>(false);
+  const [evaluatedResult, setEvaluatedResult] = useState<number>(0);
+  const [lastFormula, setLastFormula] = useState<string>('');
   const [history, setHistory] = useState<{ expression: string; result: number; id: string }[]>(() => {
     try {
       const saved = localStorage.getItem('valutax_calc_history');
@@ -52,7 +55,14 @@ export default function CalculatorTab({ onResultEvaluated }: CalculatorTabProps)
     if (key === 'C') {
       setExpression('');
       setPreviewResult(0);
+      setIsEvaluated(false);
+      setEvaluatedResult(0);
+      setLastFormula('');
     } else if (key === '⌫' || key === 'Backspace') {
+      if (isEvaluated) {
+        setIsEvaluated(false);
+        return;
+      }
       setExpression((prev) => {
         if (!prev) return '';
         // If it ends with spaces (like operations), trim them completely
@@ -75,51 +85,72 @@ export default function CalculatorTab({ onResultEvaluated }: CalculatorTabProps)
       };
       setHistory((prev) => [newHistoryItem, ...prev.slice(0, 9)]); // limit to last 10 entries
 
-      // Notify parent to update USD value and switch tabs
-      onResultEvaluated(roundedVal);
+      setLastFormula(expression);
+      setEvaluatedResult(roundedVal);
+      setIsEvaluated(true);
     } else if (key === '%') {
-      setExpression((prev) => {
-        if (!prev) return '';
-        const lastChar = prev.slice(-1);
-        if (['+', '-', '×', '÷', ' ', '%'].includes(lastChar)) return prev;
-        return prev + '%';
-      });
+      if (isEvaluated) {
+        setExpression(evaluatedResult.toString() + '%');
+        setIsEvaluated(false);
+      } else {
+        setExpression((prev) => {
+          if (!prev) return '';
+          const lastChar = prev.slice(-1);
+          if (['+', '-', '×', '÷', ' ', '%'].includes(lastChar)) return prev;
+          return prev + '%';
+        });
+      }
     } else if (['+', '-', '×', '÷', '*', '/'].includes(key)) {
       const displayOp = key === '*' ? '×' : key === '/' ? '÷' : key;
-      setExpression((prev) => {
-        if (!prev) {
-          if (displayOp === '-') return '-'; // allow starting with a negative number
-          return '';
-        }
-        const trimmed = prev.trim();
-        const lastChar = trimmed.slice(-1);
-        
-        // If last char is an operator, replace it
-        if (['+', '-', '×', '÷'].includes(lastChar)) {
-          return trimmed.slice(0, -1) + ' ' + displayOp + ' ';
-        }
-        
-        return prev + ' ' + displayOp + ' ';
-      });
+      if (isEvaluated) {
+        setExpression(evaluatedResult.toString() + ' ' + displayOp + ' ');
+        setIsEvaluated(false);
+      } else {
+        setExpression((prev) => {
+          if (!prev) {
+            if (displayOp === '-') return '-'; // allow starting with a negative number
+            return '';
+          }
+          const trimmed = prev.trim();
+          const lastChar = trimmed.slice(-1);
+          
+          // If last char is an operator, replace it
+          if (['+', '-', '×', '÷'].includes(lastChar)) {
+            return trimmed.slice(0, -1) + ' ' + displayOp + ' ';
+          }
+          
+          return prev + ' ' + displayOp + ' ';
+        });
+      }
     } else if (key === '.') {
-      setExpression((prev) => {
-        if (!prev) return '0.';
-        
-        // Split current expression by operators to check the last active number token
-        const tokens = prev.split(/[\+\-\×\÷]/);
-        const lastToken = tokens[tokens.length - 1];
-        
-        if (lastToken.includes('.')) return prev; // already has a decimal
-        if (lastToken === '') return prev + '0.';
-        return prev + '.';
-      });
+      if (isEvaluated) {
+        setExpression('0.');
+        setIsEvaluated(false);
+      } else {
+        setExpression((prev) => {
+          if (!prev) return '0.';
+          
+          // Split current expression by operators to check the last active number token
+          const tokens = prev.split(/[\+\-\×\÷]/);
+          const lastToken = tokens[tokens.length - 1];
+          
+          if (lastToken.includes('.')) return prev; // already has a decimal
+          if (lastToken === '') return prev + '0.';
+          return prev + '.';
+        });
+      }
     } else if (/^\d$/.test(key)) {
-      setExpression((prev) => {
-        // Prevent starting with multiple zeros
-        if (prev === '0') return key;
-        if (prev.endsWith(' 0')) return prev.slice(0, -1) + key;
-        return prev + key;
-      });
+      if (isEvaluated) {
+        setExpression(key);
+        setIsEvaluated(false);
+      } else {
+        setExpression((prev) => {
+          // Prevent starting with multiple zeros
+          if (prev === '0') return key;
+          if (prev.endsWith(' 0')) return prev.slice(0, -1) + key;
+          return prev + key;
+        });
+      }
     }
   };
 
@@ -183,7 +214,12 @@ export default function CalculatorTab({ onResultEvaluated }: CalculatorTabProps)
 
   const useHistoryItem = (item: { expression: string; result: number }) => {
     setExpression(item.expression);
+    setIsEvaluated(false);
+    setEvaluatedResult(0);
   };
+
+  const currentValue = isEvaluated ? evaluatedResult : previewResult;
+  const isConvertDisabled = currentValue === 0;
 
   return (
     <div id="calculator-section" className="grid grid-cols-1 lg:grid-cols-12 gap-8 w-full max-w-4xl mx-auto px-1 sm:px-4 py-4">
@@ -192,21 +228,48 @@ export default function CalculatorTab({ onResultEvaluated }: CalculatorTabProps)
         {/* Displays */}
         <div className="mb-6 flex flex-col justify-end items-end bg-slate-950/50 p-5 rounded-2xl border border-slate-800/40 min-h-[140px] text-right font-mono overflow-hidden">
           <div className="text-slate-400 text-sm overflow-x-auto whitespace-nowrap max-w-full pb-1 scrollbar-none h-6">
-            {expression || '0'}
+            {isEvaluated ? (
+              <span className="text-slate-500">{lastFormula} =</span>
+            ) : (
+              expression || '0'
+            )}
           </div>
           <div className="text-3xl font-bold text-slate-50 tracking-tight overflow-x-auto whitespace-nowrap max-w-full py-1 h-12">
-            {expression ? formatCurrencyValue(previewResult) : '0'}
+            {isEvaluated ? (
+              formatCurrencyValue(evaluatedResult)
+            ) : (
+              expression ? formatCurrencyValue(previewResult) : '0'
+            )}
           </div>
           <div className="text-xs text-emerald-500 font-sans tracking-wide mt-1 flex items-center gap-1.5 opacity-60">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-            Previsualización en tiempo real
+            {isEvaluated ? 'Resultado calculado' : 'Previsualización en tiempo real'}
           </div>
         </div>
+
+        {/* Dedicated Convert Button */}
+        <button
+          id="send-to-converter-btn"
+          onClick={() => onResultEvaluated(currentValue)}
+          disabled={isConvertDisabled}
+          className={`w-full py-3.5 px-5 mb-4 rounded-2xl font-bold text-xs sm:text-sm tracking-wide transition-all flex items-center justify-center gap-2.5 shadow-lg select-none cursor-pointer ${
+            isConvertDisabled
+              ? 'bg-slate-800/40 text-slate-600 border border-slate-800/50 cursor-not-allowed'
+              : 'bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-slate-950 shadow-emerald-950/20 active:scale-[0.98]'
+          }`}
+        >
+          <i className="fa-solid fa-money-bill-transfer text-base"></i>
+          <span>
+            {isConvertDisabled
+              ? 'Calcula un monto para convertir'
+              : `Convertir ${formatCurrencyValue(currentValue)} USD`}
+          </span>
+        </button>
 
         {/* Keyboard Instructions (Desktop) */}
         <div className="hidden sm:flex justify-between items-center px-2 py-1 mb-4 text-[10px] text-slate-500 font-mono">
           <span><i className="fa-solid fa-keyboard mr-1"></i> Teclado habilitado</span>
-          <span>[Enter] = Enviar a Convertidor</span>
+          <span>[Enter] = Calcular resultado</span>
         </div>
 
         {/* Grid Keypad */}
@@ -229,7 +292,7 @@ export default function CalculatorTab({ onResultEvaluated }: CalculatorTabProps)
       </div>
 
       {/* Calculator History/Tape */}
-      <div className="lg:col-span-5 bg-slate-900/20 border border-slate-800/30 p-6 rounded-3xl flex flex-col h-[480px]">
+      <div className="lg:col-span-5 bg-slate-900/20 border border-slate-800/30 p-6 rounded-3xl flex flex-col h-[540px]">
         <div className="flex justify-between items-center mb-4 pb-2 border-b border-slate-800/40">
           <h3 className="text-sm font-semibold tracking-wide uppercase text-slate-400 flex items-center gap-2">
             <i className="fa-solid fa-clock-history text-emerald-500"></i> Historial Financiero
@@ -254,7 +317,7 @@ export default function CalculatorTab({ onResultEvaluated }: CalculatorTabProps)
                 </div>
                 <p className="text-xs font-medium">No hay operaciones previas</p>
                 <p className="text-[10px] mt-1 text-slate-500">
-                  Calcula una expresión y presiona "=" para guardar el registro y convertir.
+                  Calcula una expresión y presiona "=" para guardar el registro.
                 </p>
               </div>
             ) : (
