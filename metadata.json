@@ -1,0 +1,6 @@
+{
+  "name": "ValutaX",
+  "description": "Premium multi-currency converter and financial calculator PWA with real-time rates.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
